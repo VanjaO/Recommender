@@ -7,6 +7,10 @@ Exploring recommender systems for Adresseavisa
 * (add your names)
 
 ## Python Environment Setup
+The easiest way of setting up a running environmet is using Anaconda. Search
+for how you set it up on your computer, or use your own way of setting up
+the necessary environmental components. These are required:
+
 * Python 3.8
 * Sklearn
 * Pandas
