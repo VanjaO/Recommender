@@ -14,6 +14,10 @@ Exploring recommender systems for Adresseavisa
 * Seaborn
 * Jupyter (notebook to run code on local machine)
 
+## Currently implemented
+* Import of dataset using code in project_example.py (pandas)
+* Extracting results using code in project_example.py. Results is a numpy.ndarray of size (1000,20340)
+* Visualize data structures by column titles/indexes
 ## Dataset
 Adresseavisa 
 
