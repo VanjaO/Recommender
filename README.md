@@ -3,7 +3,7 @@ Exploring recommender systems for Adresseavisa
 
 ## Contributors (fill in your name)
 * Vanja Falck
-* 
+* Kaban Koochakpour
 * (add your names)
 
 ## Python Environment Setup
