@@ -82,7 +82,28 @@ def load_dataset(df):
     
     for row in df_ext.itertuples():
         ratings[row[1]-1, row[2]-1] = 1.0
-    return ratings
+    return ratings 
+
+def load_dataset_activeTime(df):
+    """
+        Convert dataframe to user-item-interaction matrix
+        Rows are userId, columns are documentId, value is sum of 
+        activeTime for each unique user-document, that is
+        if a user watched an article more than once, the total
+        activeTime is given.
+    """
+    df = df[~df['documentId'].isnull()]
+    df = df.sort_values(by=['userId', 'time'])
+    
+    newset = df[['userId', 'documentId', 'activeTime']]
+    newset.replace('None', np.nan, inplace=True)
+    newset2 = newset.dropna()
+    
+    # Sum up all activeTime for one particular user and document
+    df1 = newset2.groupby(['userId', 'documentId']).sum()
+    df1['activeTime'] = newset2.groupby(['userId', 'documentId']).sum()['activeTime']
+    # Unstack to turn userId into rows and documentId into columns
+    return df1.unstack()
     
 def train_test_split(ratings, fraction=0.2):
     """Leave out a fraction of dataset for test use"""
