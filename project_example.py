@@ -94,16 +94,22 @@ def load_dataset_activeTime(df):
     """
     df = df[~df['documentId'].isnull()]
     df = df.sort_values(by=['userId', 'time'])
-    
-    newset = df[['userId', 'documentId', 'activeTime']]
+    newset = df.loc[:,('userId', 'documentId', 'activeTime')]
     newset.replace('None', np.nan, inplace=True)
     newset2 = newset.dropna()
     
     # Sum up all activeTime for one particular user and document
     df1 = newset2.groupby(['userId', 'documentId']).sum()
-    df1['activeTime'] = newset2.groupby(['userId', 'documentId']).sum()['activeTime']
+  
     # Unstack to turn userId into rows and documentId into columns
     return df1.unstack()
+
+def clean_activeTime_zeros(data):
+    npSet = data.to_numpy()
+    # Flipp all nan to 0
+    np.nan_to_num(npSet,0)
+    # Return a numpy array with nan replaced by zero
+    return npSet
     
 def train_test_split(ratings, fraction=0.2):
     """Leave out a fraction of dataset for test use"""
