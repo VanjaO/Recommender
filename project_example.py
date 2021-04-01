@@ -104,6 +104,40 @@ def load_dataset_activeTime(df):
     # Unstack to turn userId into rows and documentId into columns
     return df1.unstack()
 
+def clean_dataset_0_1_1(df):
+    """
+    -1 : negative by very short activeTime
+    1  : positive by relatively higher activeTime
+    0  : neutral, as not watching an article does not imply dislike
+    
+    Takes a dataset from load_dataset_activeTime(df).
+    Calculates mean activeTime row-wise (per user) and "normalises" each
+    users activeTime by taking activeTime/mean.
+    This is done with NaN in the table, as they do not inflict on 
+    these calculations.
+    
+    Then 50% below the median (after normalisation) for 
+    the whole df is set to -1 (as being very short activeTime), 
+    all above is set to 1.
+    
+    The dataset can then be run through the clean_zeros(df) which
+    outputs a numpy version of the dataset, replacing all NaN
+    with 0.
+    """
+    
+    # Normalize activeTime across each users mean activeTime
+    df = df * (1.0/df.mean())
+    
+    # Set value to distinguish betweene like and dislike
+    setValue = df.median().median() * 0.5
+    
+    # Avoid changing NaN - only cells with floats
+    mask = df.activeTime.isnull()
+    df.activeTime[~mask] = np.where(df.activeTime < setValue,  -1.0, 1.0)
+
+    return df
+    
+
 def clean_activeTime_zeros(data):
     npSet = data.to_numpy()
     # Flipp all nan to 0
