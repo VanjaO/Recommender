@@ -128,13 +128,44 @@ def clean_dataset_0_1_1(df):
     # Normalize activeTime across each users mean activeTime
     df = df * (1.0/df.mean())
     
-    # Set value to distinguish betweene like and dislike
+    # Set value to distinguish between like and dislike
     setValue = df.median().median() * 0.5
     
     # Avoid changing NaN - only cells with floats
     mask = df.activeTime.isnull()
     df.activeTime[~mask] = np.where(df.activeTime < setValue,  -1.0, 1.0)
 
+    return df
+
+def clean_dataset_0_1_5(df):
+ 
+    # HERE YOU CAN TWEAK TIMESTEPS
+    # Set value to distinguish between like and dislike
+    # Adjust these as suited!!!
+    setValue1 = 5.0   # -1
+    setValue2 = 15.0  #  1
+    setValue3 = 25.0  #  2
+    setValue4 = 135.0  #  3
+    setValue5 = 245.0  #  4
+    setValue6 = 600.0  #  5   (should be higer than the max-value in activeTime)
+    
+    # DO NOT CHANGE ANYTHING BELOW (use setValue to tweak!)
+    # Use mask to avoid changing NaN - only cells with floats
+    mask = df.activeTime.isnull()
+    
+    # This is working:
+    #df.activeTime[~mask] = np.where(df.activeTime < setValue6, -1, 1)
+    df.activeTime[~mask] = np.where(df.activeTime < setValue1,  9000, df.activeTime)
+    df.activeTime[~mask] = np.where(df.activeTime < setValue2,  1000, df.activeTime)
+    df.activeTime[~mask] = np.where(df.activeTime < setValue3,  2000, df.activeTime)
+    df.activeTime[~mask] = np.where(df.activeTime < setValue4,  3000, df.activeTime)
+    df.activeTime[~mask] = np.where(df.activeTime < setValue5,  4000, df.activeTime)
+    df.activeTime[~mask] = np.where(df.activeTime < setValue6,  5000, df.activeTime)
+
+    df.activeTime[~mask] = np.where(df.activeTime == 9000,  -1000, df.activeTime)
+    
+    df.activeTime[~mask] = np.where(df.activeTime < 5001,  df.activeTime*0.001, df.activeTime)
+    
     return df
     
 
