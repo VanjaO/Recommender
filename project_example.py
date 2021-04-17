@@ -5,11 +5,12 @@ Started out with code:
 Created on Sat Jan  5 13:48:20 2019
 @author: zhanglemei and peng
 
-Added functions:
+Group added functions:
 def load_dataset_activeTime(df)
 def clean_dataset_0_1_1(df)
 def clean_dataset_0_1_5(df)
 def clean_activeTime_zeros(data)
+def AnalyzeUser(data, u)
 
 """
 
@@ -20,12 +21,19 @@ import numpy as np
 import ExplicitMF as mf
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-
 from sklearn.metrics.pairwise import linear_kernel
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
+
+# ADDED
+from math import sqrt
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import MinMaxScaler
+from sklearn import preprocessing
+from sklearn.metrics import pairwise_distances
+from sklearn.neighbors import NearestNeighbors
 
 
 def load_data(path):
@@ -178,7 +186,6 @@ def clean_dataset_0_1_5(df):
     
     return df
     
-
 def clean_activeTime_zeros(data):
     npSet = data.to_numpy()
     # Flipp all nan to 0
@@ -186,25 +193,119 @@ def clean_activeTime_zeros(data):
     # Return a numpy array with nan replaced by zero
     return npSet
 
-
-def getrecommendations(user, number_of_recs = 30):
-    if user > len(pivot_table.index):
-        print('New User, Out of range'.format(len(pivot_table.index)))
+def getrecommendations(user, pivot_table, topRecs, number_of_recs = 30):
+    assert type(pivot_table) is pd.core.frame.DataFrame, "Fail to assert (in getrecommendations) pivot_table as pandas dataframe"
+    if (user > pivot_table.shape[0]):
+        print('New User, Out of range'.format(pivot_table.shape[0]))
     else:
         #print("These are all the documents you have viewed in the past: \n\n{}".format('\n'.join(read[user])))
         #print()
         print("We recommend you these documents \n")
+        
     for k,v in topRecs.items():
         if user == k:
             for i in v[:number_of_recs]:
                 print('{} with similarity: {:.4f}'.format(i[0], 1 - i[1]))
 
-                
+
 def rmse(prediction, ground_truth):
     prediction = prediction[ground_truth.nonzero()].flatten()
     ground_truth = ground_truth[ground_truth.nonzero()].flatten()
+    
     return sqrt(mean_squared_error(prediction, ground_truth))
-                
+
+
+def AnalyzeUser(df, u=1):
+    docuTitle = df[['documentId', 'title', 'time']].copy()
+    docuTitle = docuTitle[~docuTitle['documentId'].isnull()]
+    docuTitle.drop_duplicates(subset=['documentId'], inplace=True)
+    
+    docuTitle.insert(0, 'DocuID', range(0, 20344))
+    
+    users = df[['userId']].copy()
+    users = users[~users['userId'].isnull()]
+    users.drop_duplicates(subset=['userId'], inplace=True)
+    users.insert(0, 'UserID', range(0, 1000))
+    event_logs = df[['userId', 'documentId', 'activeTime']].copy()
+    event_logs = event_logs[~event_logs['activeTime'].isnull()]
+    event_logs = event_logs[~event_logs['documentId'].isnull()]
+    
+    # TODO EXPLAIN ALL BELOW:
+    column_names_to_normalize = ['activeTime']
+    x = event_logs[column_names_to_normalize].values
+    min_max_scaler = preprocessing.MinMaxScaler()
+    x_scaled = min_max_scaler.fit_transform(x)
+    df_temp = pd.DataFrame(x_scaled, columns=column_names_to_normalize, index = event_logs.index)
+    event_logs[column_names_to_normalize] = df_temp
+    
+    collabDocu = pd.merge(docuTitle, event_logs, on='documentId')
+    collabUserDocu = pd.merge(users, collabDocu, on='userId')
+    missing_pivot = collabUserDocu.pivot_table(values = 'activeTime', index = 'UserID', columns = 'DocuID')
+    
+    read = {}
+    rows_indexes = {}
+    for i,row in missing_pivot.iterrows():
+        rows = [x for x in range(0,len(missing_pivot.columns))]
+        combine = list(zip(row.index, row.values, rows))
+        readd = [(x,z) for x,y,z in combine if str(y) != 'nan']
+        index = [i[1] for i in readd]
+        row_names = [i[0] for i in readd]
+        rows_indexes[i] = index
+        read[i] = row_names
+    
+    pivot_table = collabUserDocu.pivot_table(values = 'activeTime', index = 'UserID', columns = 'DocuID').fillna(0)
+    pivot_table = pivot_table.apply(np.sign)
+    
+    assert type(pivot_table) is pd.core.frame.DataFrame, "Fail to assert (1) pivot_table as pandas dataframe"
+    
+    notread = {}
+    notread_indexes = {}
+    for i,row in pivot_table.iterrows():
+        rows = [x for x in range(0,len(missing_pivot.columns))]
+        combine = list(zip(row.index, row.values, row))
+        idx_row = [(idx,col) for idx, val, col in combine if not val > 0]
+        indices = [i[1] for i in idx_row]
+        row_names = [i[0] for i in idx_row]
+        notread_indexes[i] = indices
+        notread[i] = row_names
+
+    n = 5
+    cosine_knn = NearestNeighbors(n_neighbors = n, algorithm = 'brute', metric = 'cosine')
+    docu_cosine_knn_fit = cosine_knn.fit(pivot_table.T.values)
+    docu_distances, docu_indices = docu_cosine_knn_fit.kneighbors(pivot_table.T.values)
+    
+    docus_dic = {}
+    copyPivot = pivot_table.copy()
+    for i in range(pivot_table.T.shape[0]):
+        docu_idx = docu_indices[i]
+        col_names = copyPivot.T.index[docu_idx].tolist()
+        docus_dic[copyPivot.T.index[i]] = col_names
+        
+    topRecs = {}
+    for k,v in rows_indexes.items():
+        docu_idx = [j for i in docu_indices[v] for j in i]
+        docu_dist = [j for i in docu_distances[v] for j in i]
+        combine = list(zip(docu_dist, docu_idx))
+        diction = {i:d for d,i in combine if i not in v}
+        zipped = list(zip(diction.keys(),diction.values()))
+        sort = sorted(zipped, key = lambda x: x[1])
+        recommendations = [(pivot_table.columns[i], d) for i,d in sort]
+        topRecs[k] = recommendations
+        
+        
+    docu_distances = 1 - docu_distances
+    ground_truth = pivot_table.T.values[docu_distances.argsort()[0]]
+    predictions = docu_distances.T.dot(pivot_table.T.values) / np.array([np.abs(docu_distances.T).sum(axis = 1)]).T
+    accuracy = rmse(predictions,ground_truth)
+    
+    assert type(pivot_table) is pd.core.frame.DataFrame, "Fail to assert (2) pivot_table as pandas dataframe"
+    
+    getrecommendations(u, pivot_table, topRecs)
+    
+    return accuracy
+
+
+    
 # END OF ADDED FUNCTIONS
 
     
@@ -342,11 +443,4 @@ if __name__ == '__main__':
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
+  
