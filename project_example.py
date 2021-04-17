@@ -1,9 +1,16 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
+Started out with code:
 Created on Sat Jan  5 13:48:20 2019
-
 @author: zhanglemei and peng
+
+Added functions:
+def load_dataset_activeTime(df)
+def clean_dataset_0_1_1(df)
+def clean_dataset_0_1_5(df)
+def clean_activeTime_zeros(data)
+
 """
 
 import json
@@ -83,6 +90,9 @@ def load_dataset(df):
     for row in df_ext.itertuples():
         ratings[row[1]-1, row[2]-1] = 1.0
     return ratings 
+
+
+# START OF ADDED FUNCTIONS
 
 def load_dataset_activeTime(df):
     """
@@ -175,6 +185,28 @@ def clean_activeTime_zeros(data):
     np.nan_to_num(npSet,0)
     # Return a numpy array with nan replaced by zero
     return npSet
+
+
+def getrecommendations(user, number_of_recs = 30):
+    if user > len(pivot_table.index):
+        print('New User, Out of range'.format(len(pivot_table.index)))
+    else:
+        #print("These are all the documents you have viewed in the past: \n\n{}".format('\n'.join(read[user])))
+        #print()
+        print("We recommend you these documents \n")
+    for k,v in topRecs.items():
+        if user == k:
+            for i in v[:number_of_recs]:
+                print('{} with similarity: {:.4f}'.format(i[0], 1 - i[1]))
+
+                
+def rmse(prediction, ground_truth):
+    prediction = prediction[ground_truth.nonzero()].flatten()
+    ground_truth = ground_truth[ground_truth.nonzero()].flatten()
+    return sqrt(mean_squared_error(prediction, ground_truth))
+                
+# END OF ADDED FUNCTIONS
+
     
 def train_test_split(ratings, fraction=0.2):
     """Leave out a fraction of dataset for test use"""
