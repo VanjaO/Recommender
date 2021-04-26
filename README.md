@@ -17,7 +17,7 @@ the necessary environmental components. These are required:
 * Matplotlib
 * Seaborn
 * Jupyter (notebook to run code on local machine)
-
+* Surprise (run pip install scikit-surprise in notebook terminal) 
 ## Currently implemented
 * Import of dataset using code in project_example.py (pandas)
 * Extracting results using code in project_example.py. Results is a numpy.ndarray of size (1000,20340)
